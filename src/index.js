@@ -1,4 +1,4 @@
-const form = document.querySelector('[type="submit"]');
+const form = document.querySelector('.search-form');
 
 const { log } = console;
 
