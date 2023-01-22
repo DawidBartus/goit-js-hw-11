@@ -1,57 +1,106 @@
 import Notiflix from 'notiflix';
+import SimpleLightbox from 'simplelightbox';
+import 'simplelightbox/dist/simple-lightbox.min.css';
+import _ from 'lodash';
+import axios from 'axios';
 
 const form = document.querySelector('.search-form');
 const formValue = document.querySelector('[type="text"]');
 const gallery = document.querySelector('.gallery');
 
+let page = 1;
+let searchingText;
+let link;
+let maxPage;
+
 const { log } = console;
 // log(formValue);
 
-const letItHappen = e => {
+const searchForImages = e => {
   e.preventDefault();
-  let searchingText = formValue.value;
+  searchingText = formValue.value;
+  page = 1;
+  gallery.innerHTML = '';
+  window.addEventListener('scroll', newFetch);
 
   if (searchingText) {
-    let link = `https://pixabay.com/api/?key=14551273-a2f87cd1c4bb2f6c327ac1a47&q=${searchingText}&image_type=photo`;
+    link = `https://pixabay.com/api/?key=14551273-a2f87cd1c4bb2f6c327ac1a47&q=${searchingText}&safesearch=true&orientation=horizontal&image_type=photo&page=${page}&per_page=40`;
 
-    fetchImage(link).then(res => createHTMLElem(res));
+    fetchImage(link).then(res => {
+      createHTMLElem(res);
+      maxPage = Math.ceil(res.totalHits / 40);
+      if (res.total !== 0) {
+        Notiflix.Notify.info(`Hooray! We found ${res.total} images.`);
+      }
+    });
   } else {
-    Notiflix.Notify.info('Wygląda na to, że nic nie wpisałeś');
+    Notiflix.Notify.info('Try typing "dog"');
+  }
+
+  return page, searchingText, link;
+};
+
+const fetchImage = async link => {
+  try {
+    const response = await axios.get(link);
+    const images = await response.data;
+
+    return images;
+  } catch (error) {
+    Notiflix.Notify.info(error.message);
   }
 };
+//   // return fetch(link).then(res => {
+//   //   if (!res.ok) {
+//   //     throw new Error(response.status);
+//   //   } else {
+//   //     return res.json(link);
+//   //   }
+//   // });
 
-const fetchImage = link => {
-  return fetch(link).then(res => {
-    if (!res.ok) {
-      throw new Error(response.status);
-    } else {
-      log('fetch res', res);
-      return res.json();
+//   return axios
+//     .get(link)
+//     .then(res => {
+//       return res.data;
+//     })
+//     .catch(error => Notiflix.Notify.info(error.message));
+// };
+
+const newFetch = _.throttle(() => {
+  const endOfPage =
+    window.innerHeight + window.pageYOffset >= document.body.offsetHeight;
+
+  if (endOfPage) {
+    if (page !== maxPage) {
+      page += 1;
+
+      link = `https://pixabay.com/api/?key=14551273-a2f87cd1c4bb2f6c327ac1a47&q=${searchingText}&safesearch=true&orientation=horizontal&image_type=photo&page=${page}&per_page=40`;
+      fetchImage(link).then(res => createHTMLElem(res));
+      Notiflix.Notify.info(`You are on page ${page}`);
+      if (page === maxPage) {
+        window.removeEventListener('scroll', newFetch);
+      }
     }
-  });
-};
+  }
+}, 500);
 
 // Create and insert images to DOM
 const createHTMLElem = res => {
-  gallery.innerHTML = '';
-  if (res.totalHits > 1 && res.totalHits > 20) {
+  if (res.totalHits >= 1) {
     addElementsToDOM(res);
-    Notiflix.Notify.info(`Znalazłem ${res.total} obrazków`);
-  } else if (res.totalHits > 1 && res.totalHits < 20) {
-    addElementsToDOM(res);
-    Notiflix.Notify.info(
-      `Wygląda na to, że znalazłem tylko ${res.total}. Jest tylko jedna strona`
-    );
+    lightbox.refresh();
   } else {
-    Notiflix.Notify.info('Czego szuaksz?');
+    Notiflix.Notify.info(
+      'Sorry, there are no images matching your search query. Please try again.'
+    );
   }
 };
 
 const addElementsToDOM = res => {
-  log(res);
   let img = res.hits
     .map(elem => {
-      let page = elem.webformatURL;
+      let minature = elem.webformatURL;
+      let bigImage = elem.largeImageURL;
       let tags = elem.tags;
       let likes = elem.likes;
       let views = elem.views;
@@ -59,7 +108,7 @@ const addElementsToDOM = res => {
       let downloads = elem.downloads;
 
       let newImage = `<div class="photo-card">
-  <img src="${page}" alt="${tags}" width="360" height="auto" loading="lazy" />
+  <img src="${minature}" alt="${tags}" href="${bigImage}" class="gallery__link" loading="lazy" />
   <div class="info">
     <p class="info-item">
       <b>Likes </br>
@@ -82,7 +131,9 @@ const addElementsToDOM = res => {
       return newImage;
     })
     .join('');
-  gallery.innerHTML = img;
+  gallery.innerHTML = gallery.innerHTML + img;
 };
 
-form.addEventListener('submit', letItHappen);
+let lightbox = new SimpleLightbox('.gallery__link');
+
+form.addEventListener('submit', searchForImages);
