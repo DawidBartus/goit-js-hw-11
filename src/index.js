@@ -9,7 +9,7 @@ const formValue = document.querySelector('[type="text"]');
 const gallery = document.querySelector('.gallery');
 
 let page = 1;
-let searchingText;
+let searchText;
 let link;
 let maxPage;
 
@@ -18,13 +18,13 @@ const { log } = console;
 
 const searchForImages = e => {
   e.preventDefault();
-  searchingText = formValue.value;
+  searchText = formValue.value;
   page = 1;
   gallery.innerHTML = '';
   window.addEventListener('scroll', newFetch);
 
-  if (searchingText) {
-    link = `https://pixabay.com/api/?key=14551273-a2f87cd1c4bb2f6c327ac1a47&q=${searchingText}&safesearch=true&orientation=horizontal&image_type=photo&page=${page}&per_page=40`;
+  if (searchText) {
+    link = `https://pixabay.com/api/?key=14551273-a2f87cd1c4bb2f6c327ac1a47&q=${searchText}&safesearch=true&orientation=horizontal&image_type=photo&page=${page}&per_page=40`;
 
     fetchImage(link).then(res => {
       createHTMLElem(res);
@@ -37,7 +37,7 @@ const searchForImages = e => {
     Notiflix.Notify.info('Try typing "dog"');
   }
 
-  return page, searchingText, link;
+  return page, searchText, link;
 };
 
 const fetchImage = async link => {
@@ -74,7 +74,7 @@ const newFetch = _.throttle(() => {
     if (page !== maxPage) {
       page += 1;
 
-      link = `https://pixabay.com/api/?key=14551273-a2f87cd1c4bb2f6c327ac1a47&q=${searchingText}&safesearch=true&orientation=horizontal&image_type=photo&page=${page}&per_page=40`;
+      link = `https://pixabay.com/api/?key=14551273-a2f87cd1c4bb2f6c327ac1a47&q=${searchText}&safesearch=true&orientation=horizontal&image_type=photo&page=${page}&per_page=40`;
       fetchImage(link).then(res => createHTMLElem(res));
       Notiflix.Notify.info(`You are on page ${page}`);
       if (page === maxPage) {
